@@ -11,7 +11,6 @@
       <file file_name="UC1int.c"/>
     </folder>
     <folder Name="System Files">
-      <file file_name="crt0.asm"/>
       <file file_name="$(StudioDir)/ctl/source/threads.js"/>
     </folder>
   </project>
