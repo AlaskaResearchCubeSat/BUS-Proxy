@@ -1,6 +1,6 @@
 #include <msp430.h>
 #include <ctl_api.h>
-#include "UCA1_uart.h"
+#include <UCA1_uart.h>
 
 //buffers for USB UART
 struct Tx UCA1_TxBuf;

@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <msp430.h>
 #include <ctl_api.h>
-#include "terminal.h"
-#include "ARCbus.h"
-#include "UCA1_uart.h"
+#include <terminal.h>
+#include <ARCbus.h>
+#include <UCA1_uart.h>
 
 
 //helper function to parse I2C address
@@ -15,8 +15,25 @@ unsigned char getI2C_addr(char *str,short res){
   unsigned long addr;
   unsigned char tmp;
   char *end;
+  //attempt to parse a numeric address
   addr=strtol(str,&end,0);
+  //check for errors
   if(end==str){
+    //check for symbolic matches
+    if(!strcmp(str,"LEDL")){
+      return BUS_ADDR_LEDL;
+    }else if(!strcmp(str,"ACDS")){
+      return BUS_ADDR_ACDS;
+    }else if(!strcmp(str,"COMM")){
+      return BUS_ADDR_COMM;
+    }else if(!strcmp(str,"IMG")){
+      return BUS_ADDR_IMG;
+    }else if(!strcmp(str,"CDH")){
+      return BUS_ADDR_CDH;
+    }else if(!strcmp(str,"GC")){
+      return BUS_ADDR_GC;
+    }
+    //not a known address, error
     printf("Error : could not parse address \"%s\".\r\n",str);
     return 0xFF;
   }
@@ -24,15 +41,18 @@ unsigned char getI2C_addr(char *str,short res){
     printf("Error : unknown sufix \"%s\" at end of address\r\n",end);
     return 0xFF;
   }
+  //check address length
   if(addr>0x7F){
     printf("Error : address 0x%04lX is not 7 bits.\r\n",addr);
     return 0xFF;
   }
+  //check for reserved address
   tmp=0x78&addr;
   if((tmp==0x00 || tmp==0x78) && res){
     printf("Error : address 0x%02lX is reserved.\r\n",addr);
     return 0xFF;
   }
+  //return address
   return addr;
 }
 
@@ -60,10 +80,13 @@ int restCmd(char **argv,unsigned short argc){
     }
     //setup packet 
     BUS_cmd_init(buff,CMD_RESET);
-    resp=BUS_cmd_tx(addr,buff,0,0,SEND_FOREGROUND);
+    resp=BUS_cmd_tx(addr,buff,0,0,BUS_I2C_SEND_FOREGROUND);
     switch(resp){
       case 0:
         puts("Command Sent Sucussfully.\r");
+      break;
+      case ERR_TIMEOUT:
+        puts("IIC timeout Error.\r");
       break;
     }
   }
@@ -288,7 +311,7 @@ int txCmd(char **argv,unsigned short argc){
     }
   }
   len=i;
-  resp=BUS_cmd_tx(addr,buff,len,nack,SEND_FOREGROUND);
+  resp=BUS_cmd_tx(addr,buff,len,nack,BUS_I2C_SEND_FOREGROUND);
   switch(resp){
     case RET_SUCCESS:
       printf("Command Sent Sucussfully.\r\n");
@@ -308,7 +331,7 @@ int spiCmd(char **argv,unsigned short argc){
   char *end;
   unsigned short crc;
   //static unsigned char rx[2048+2];
-  static unsigned char rx[512+2];
+  unsigned char *rx=NULL;
   int resp,i,len=100;
   if(argc<1){
     printf("Error : too few arguments.\r\n");
@@ -330,10 +353,17 @@ int spiCmd(char **argv,unsigned short argc){
       printf("Error : unknown sufix \"%s\" at end of length \"%s\"\r\n",end,argv[2]);
       return 3;
     }    
-    if(len+2>sizeof(rx)){
-      printf("Error : length is too long.\r\n");
+    if(len+2>BUS_get_buffer_size()){
+      printf("Error : length is too long. Maximum Length is %u\r\n",BUS_get_buffer_size());
       return 4;
     }
+  }
+  //get buffer, set a timeout of 2 secconds
+  rx=BUS_get_buffer(CTL_TIMEOUT_DELAY,2048);
+  //check for error
+  if(rx==NULL){
+    printf("Error : Timeout while waiting for buffer.\r\n");
+    return -1;
   }
   //fill buffer with "random" data
   for(i=0;i<len;i++){
@@ -348,11 +378,8 @@ int spiCmd(char **argv,unsigned short argc){
   while(UCB0STAT&UCBBUSY);
   //TESTING: set pin low
   P8OUT&=~BIT0;
-  switch(resp){
-    case ERR_BADD_ADDR:
-      printf("Error : Bad Address\r\n");
-    break;
-    case RET_SUCCESS:
+  //check return value
+  if(resp==RET_SUCCESS){
       //print out data message
       printf("SPI data recived\r\n");
       //print out data
@@ -361,14 +388,11 @@ int spiCmd(char **argv,unsigned short argc){
         printf("%03i ",rx[i]);
       }
       printf("\r\n");
-    break;
-    case ERR_BAD_CRC:
-      puts("Bad CRC\r");
-    break;
-    default:      
-      printf("Unknown Error %i\r\n",resp);
-    break;
+  }else{
+    printf("%s\r\n",BUS_error_str(resp));
   }
+  //free buffer
+  BUS_free_buffer();
   return 0;
 }
 
@@ -402,7 +426,7 @@ int printCmd(char **argv,unsigned short argc){
   //TESTING: set pin high
   P8OUT|=BIT0;
   //send command
-  BUS_cmd_tx(addr,buff,len,0,SEND_FOREGROUND);
+  BUS_cmd_tx(addr,buff,len,0,BUS_I2C_SEND_FOREGROUND);
   //TESTING: set pin low
   P8OUT&=~BIT0;
   return 0;
@@ -438,29 +462,12 @@ int tstCmd(char **argv,unsigned short argc){
   //TESTING: set pin high
   P8OUT|=BIT0;
   //send command
-  BUS_cmd_tx(addr,buff,len,0,SEND_FOREGROUND);
+  BUS_cmd_tx(addr,buff,len,0,BUS_I2C_SEND_FOREGROUND);
   //TESTING: wait for transaction to fully complete
   while(UCB0STAT&UCBBUSY);
   //TESTING: set pin low
   P8OUT&=~BIT0;
   return 0;
-}
-
-char *i2c_stat2str(unsigned char stat){
-  switch(stat){
-    case I2C_IDLE:
-      return "I2C_IDLE";
-    case I2C_TX:
-      return "I2C_TX";
-    case I2C_RX:
-      return "I2C_RX";
-   /* case I2C_TXRX:
-      return "I2C_TXRX";
-    case I2C_RXTX:
-      return "I2C_RXTX";*/
-    default:
-      return "unknown state";
-  }
 }
 
 //print current time
@@ -469,18 +476,163 @@ int timeCmd(char **argv,unsigned short argc){
   return 0;
 }
 
+int asyncCmd(char **argv,unsigned short argc){
+   char c;
+   int err,resp;
+   CTL_EVENT_SET_t e=0,evt;
+  enum {ASYNC_PROXY_EV_UART_CHAR=1<<0,ASYNC_PROXY_EV_ASYNC_CHAR=1<<1,ASYNC_PROXY_EV_CLOSE=1<<2};
+   unsigned char addr;
+   if(argc>1){
+    printf("Error : %s takes 0 or 1 arguments\r\n",argv[0]);
+    return -1;
+  }
+  if(argc==1){
+    addr=getI2C_addr(argv[1],0);
+    if(addr==0xFF){
+      return -1;
+    }
+    printf("Using Address 0x%02X\r\n",addr);
+    if((err=async_open(addr))){
+      printf("Error : opening async\r\n%s\r\n",BUS_error_str(err));
+      return -2;
+    }
+    printf("async open use ^C to force quit\r\n");
+    async_setup_events(&e,0,ASYNC_PROXY_EV_ASYNC_CHAR);
+    UCA1_setup_events(&e,0,ASYNC_PROXY_EV_UART_CHAR);
+    async_setup_close_event(&e,1<<2);
+    for(;;){
+      evt=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS,&e,ASYNC_PROXY_EV_UART_CHAR|ASYNC_PROXY_EV_ASYNC_CHAR|ASYNC_PROXY_EV_CLOSE,CTL_TIMEOUT_NONE,0);
+      //check for char from UART
+      if(evt&(ASYNC_PROXY_EV_UART_CHAR)){
+        c=UCA1_Getc();
+        //check for ^C
+        if(c==0x03){
+          //close connection
+          resp=async_close();
+          if(resp==RET_SUCCESS){
+            //print message
+            printf("\r\nConnection terminated by user\r\n");
+            //exit loop
+            break;
+          }else{
+            printf("\r\nError terminating connection : %s\r\n",BUS_error_str(resp));
+            break;
+          }
+        }
+        async_TxChar(c);
+      }
+      //check for char from async
+      if(evt&(ASYNC_PROXY_EV_ASYNC_CHAR)){
+        c=async_Getc(); 
+        UCA1_TxChar(c);
+      }
+      if(evt&(ASYNC_PROXY_EV_CLOSE)){
+        printf("\r\nconnection closed remotely\r\n");
+        break;
+      }
+    }
+    async_setup_events(NULL,0,0);
+    UCA1_setup_events(NULL,0,0);
+    async_setup_close_event(NULL,0);
+  }else{
+    if(!async_isOpen()){
+      printf("Async is not open, closing anyway.\r\n");
+    }
+    if(async_close()){
+      printf("Error : async_close() failed.\r\n");
+    }
+  }
+}
+
+int sendCmd(char **argv,unsigned short argc){
+  unsigned char *ptr,id;
+  unsigned short len;
+  int i,j,k;
+  if(!async_isOpen()){
+    printf("Error : Async is not open\r\n");
+    return -1;
+  }
+  //check number of arguments
+  if(argc<1){
+    printf("Error : too few arguments.\r\n");
+    return 1;
+  }
+  //Send string data
+  for(i=1,k=0;i<=argc;i++){
+    j=0;
+    while(argv[i][j]!=0){
+      async_TxChar(argv[i][j++]);
+    }
+    async_TxChar(' ');
+  }
+  return 0;
+}
+
+int recCmd(char **argv,unsigned short argc){
+  int c;
+  if(!async_isOpen()){
+    printf("Error : Async is not open\r\n");
+    return -1;
+  }
+  //check number of arguments
+  if(argc!=0){
+    printf("Error : %s takes no arguments.\r\n",argv[0]);
+    return 1;
+  }
+  do{
+    //get char
+    c=async_CheckKey();
+    //check for EOF
+    if(c!=EOF){
+      //send charecter
+      UCA1_TxChar(c);
+    }
+  }while(c!=EOF);
+  //print new line
+  printf("\r\n");
+  return 0;
+}
+
+int ARCsearch_Cmd(char **argv,unsigned short argc){
+  unsigned char buff[BUS_I2C_CRC_LEN+BUS_I2C_HDR_LEN],*ptr,*end;
+  int i,ret,found=0;
+  for(i=0;i<0x7F;i++){
+    //setup packet 
+    ptr=BUS_cmd_init(buff,7);
+    //send command
+    ret=BUS_cmd_tx(i,buff,0,0,BUS_I2C_SEND_FOREGROUND);
+    if(ret==RET_SUCCESS){
+      printf("Device Found at ADDR = 0x%02X\r\n",i);
+      found++;
+    }else if(ret!=ERR_I2C_NACK){
+      printf("Error sending to addr 0x%02X : %s\r\n",i,BUS_error_str(ret));
+    }
+  }
+  if(found==0){
+    printf("No devices found on the ARCbus\r\n");
+  }else{
+    printf("%i %s found on the ARCbus\r\n",found,found==1?"device":"devices");
+  }
+  return 0;
+}
+
+
 
 //table of commands with help
-CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or help on a spesific command.",helpCmd},
-                     {"priority"," task [priority]\r\n\t""Get/set task priority.",priorityCmd},
-                     {"timeslice"," [period]\r\n\t""Get/set ctl_timeslice_period.",timesliceCmd},
-                     {"stats","\r\n\t""Print task status",statsCmd},
-                     {"reset","\r\n\t""reset the msp430.",restCmd},
-                     {"addr"," [addr]\r\n\t""Get/Set I2C address.",addrCmd},
-                     {"tx"," [noACK] [noNACK] addr ID [[data0] [data1]...]\r\n\t""send data over I2C to an address",txCmd},
-                     {"SPI","addr [len]\r\n\t""Send data using SPI.",spiCmd},
-                     {"print"," addr str1 [[str2] ... ]\r\n\t""Send a string to addr.",printCmd},
-                     {"tst"," addr len\r\n\t""Send test data to addr.",tstCmd},
-                     {"time","\r\n\t""Return current time.",timeCmd},
-                     //end of list
-                     {NULL,NULL,NULL}};
+const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or help on a spesific command.",helpCmd},
+                         {"priority"," task [priority]\r\n\t""Get/set task priority.",priorityCmd},
+                         {"timeslice"," [period]\r\n\t""Get/set ctl_timeslice_period.",timesliceCmd},
+                         {"stats","\r\n\t""Print task status",statsCmd},
+                         {"reset","\r\n\t""reset the msp430.",restCmd},
+                         {"addr"," [addr]\r\n\t""Get/Set I2C address.",addrCmd},
+                         {"tx"," [noACK] [noNACK] addr ID [[data0] [data1]...]\r\n\t""send data over I2C to an address",txCmd},
+                         {"SPI","addr [len]\r\n\t""Send data using SPI.",spiCmd},
+                         {"print"," addr str1 [[str2] ... ]\r\n\t""Send a string to addr.",printCmd},
+                         {"tst"," addr len\r\n\t""Send test data to addr.",tstCmd},
+                         {"time","\r\n\t""Return current time.",timeCmd},
+                         {"async","[addr]\r\n\t""Open connection if address given. otherwise close connection.",asyncCmd},
+                         {"send"," str1 [[str2] ... ]\r\n\t""Send async data",sendCmd},
+                         {"rec","\r\n\t""Recive async data",recCmd},
+                         {"search","\r\n\t""Find devices on the bus",ARCsearch_Cmd},
+                         //end of list
+                         {NULL,NULL,NULL}};
