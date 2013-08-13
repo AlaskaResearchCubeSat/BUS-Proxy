@@ -7,7 +7,8 @@
 #include <terminal.h>
 #include <ARCbus.h>
 #include <UCA1_uart.h>
-
+#include <Error.h>
+#include "Proxy_errors.h"
 
 //helper function to parse I2C address
 //if res is true reject reserved addresses
@@ -95,7 +96,7 @@ int restCmd(char **argv,unsigned short argc){
     //wait for UART buffer to empty
     while(UCA1_CheckBusy());
     //write to WDTCTL without password causes PUC
-    WDT_RESET();
+    reset(ERR_LEV_INFO,ERR_SRC_CMD,CMD_ERR_RESET,0);
     //Never reached due to reset
     puts("Error : Reset Failed!\r");
   }
