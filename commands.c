@@ -618,6 +618,11 @@ int ARCsearch_Cmd(char **argv,unsigned short argc){
 }
 
 
+int replayCmd(char **argv,unsigned short argc){
+  error_log_replay();
+  return 0;
+}
+
 
 //table of commands with help
 const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or help on a spesific command.",helpCmd},
@@ -635,5 +640,6 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                          {"send"," str1 [[str2] ... ]\r\n\t""Send async data",sendCmd},
                          {"rec","\r\n\t""Recive async data",recCmd},
                          {"search","\r\n\t""Find devices on the bus",ARCsearch_Cmd},
+                         {"replay","\r\n\t""Replay errors from log",replayCmd},
                          //end of list
                          {NULL,NULL,NULL}};

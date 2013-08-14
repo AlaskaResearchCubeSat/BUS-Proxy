@@ -7,7 +7,7 @@ char *err_decode(char buf[150], unsigned short source,int err, unsigned short ar
     case PROXY_ERR_SRC_CMD:
       switch(err){
         case CMD_ERR_RESET:
-          return "Command Line : Reset Command reset";
+          return "Command Line : Commanded reset";
       }
     break;
     case PROXY_ERR_SRC_SUBSYSTEM:
