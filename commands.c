@@ -96,7 +96,7 @@ int restCmd(char **argv,unsigned short argc){
     //wait for UART buffer to empty
     while(UCA1_CheckBusy());
     //write to WDTCTL without password causes PUC
-    reset(ERR_LEV_INFO,ERR_SRC_CMD,CMD_ERR_RESET,0);
+    reset(ERR_LEV_INFO,PROXY_ERR_SRC_CMD,CMD_ERR_RESET,0);
     //Never reached due to reset
     puts("Error : Reset Failed!\r");
   }

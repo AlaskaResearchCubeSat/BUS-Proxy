@@ -5,7 +5,9 @@
 #include <ctype.h>
 #include <ARCbus.h>
 #include <UCA1_uart.h>
+#include <Error.h>
 #include "timerA.h"
+#include "Proxy_errors.h"
 #include <terminal.h>
 
 CTL_TASK_t tasks[3];
@@ -106,7 +108,8 @@ void sub_events(void *p) __toplevel{
       BUS_free_buffer_from_event();
     }
     if(e&SUB_EV_SPI_ERR_CRC){
-      puts("SPI bad CRC\r");
+      //puts("SPI bad CRC\r");
+      report_error(ERR_LEV_ERROR,PROXY_ERR_SRC_SUBSYSTEM,SUB_ERR_SPI_CRC,0);
     }
     if(e&SUB_EV_ASYNC_OPEN){
       //kill off the terminal
@@ -143,6 +146,12 @@ int main(void){
   UCA1_init_UART();
   //switch baud rate
   //UCA1_BR57600();
+  
+  
+  //setup error reporting library
+  error_init();
+  //TESTING: set log level to report everything by default
+  set_error_level(0);
   
   //setup P7 for LED's
   P7OUT=0x00;

@@ -10,6 +10,7 @@
       <file file_name="commands.c"/>
       <file file_name="UC1int.c"/>
       <file file_name="Proxy_errors.h"/>
+      <file file_name="Error_decode.c"/>
     </folder>
     <folder Name="System Files">
       <file file_name="$(StudioDir)/ctl/source/threads.js"/>
