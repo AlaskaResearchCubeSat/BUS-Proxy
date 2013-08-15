@@ -627,8 +627,6 @@ int replayCmd(char **argv,unsigned short argc){
 int reset_testCmd(char **argv,unsigned short argc){
   //mutex to abuse
   CTL_MUTEX_t mutex;
-  //function pointer
-  void (*fp)(void);
   //check what type of error to generate
   if(!strcmp(argv[1],"mutex")){
     //generate mutex unlock call error
@@ -675,13 +673,24 @@ int reset_testCmd(char **argv,unsigned short argc){
     //wait for chars to clear
     ctl_timeout_wait(ctl_get_current_time()+100);
     //call a function that is located at P1IN
-    fp=(void (*)(void))0x20;
-    fp();
+    ((void (*)(void))0x20)();
+  }else if(!strcmp(argv[1],"SVS")){
+    //generate a watchdog timeout error
+    printf("Causing Simulated SVS reset\r\n");
+    //wait for chars to clear
+    ctl_timeout_wait(ctl_get_current_time()+100);
+    //call a function that is located at P1IN
+    SVSCTL=VLD0|PORON|SVSFG;
+    //disable interrupts
+    __disable_interrupt();
+    //call from the reset vector
+    (*(void (**)(void))0xFFFE)();
   }
   printf("Failed to generate error\r\n");
   return 0;
 }
   
+//P2.0 interrupt is used as a software interrupt to trigger an unsupported call from ISR error
 void error_ISR(void) __ctl_interrupt[PORT2_VECTOR]{
   unsigned char flags=P2IFG&P2IE;
   P2IFG&=~flags;
