@@ -702,6 +702,24 @@ void error_ISR(void) __ctl_interrupt[PORT2_VECTOR]{
 }
 
 
+//print the status of each tasks stack
+int stackCmd(char **argv,unsigned short argc){
+  extern CTL_TASK_t *ctl_task_list;
+  int i;
+  CTL_TASK_t *t=ctl_task_list;
+  //format string
+  const char *fmt="%-10s\t%lp\t%lp\t%li\r\n";
+  //print out nice header
+  printf("\r\nName\tPointer\tStart\tRemaining\r\n--------------------------------------------------------------------\r\n");
+  //loop through tasks and print out info
+  while(t!=NULL){
+    printf(fmt,t->name,t->stack_pointer,t->stack_start,t->stack_pointer-t->stack_start);
+    t=t->next;
+  }
+  //add a blank line after table
+  printf("\r\n");
+  return 0;
+}
 
 
 //table of commands with help
@@ -709,6 +727,7 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                          {"priority"," task [priority]\r\n\t""Get/set task priority.",priorityCmd},
                          {"timeslice"," [period]\r\n\t""Get/set ctl_timeslice_period.",timesliceCmd},
                          {"stats","\r\n\t""Print task status",statsCmd},
+                         {"stack","\r\n\t""Print task stack status",stackCmd},
                          {"reset","\r\n\t""reset the msp430.",restCmd},
                          {"addr"," [addr]\r\n\t""Get/Set I2C address.",addrCmd},
                          {"tx"," [noACK] [noNACK] addr ID [[data0] [data1]...]\r\n\t""send data over I2C to an address",txCmd},
