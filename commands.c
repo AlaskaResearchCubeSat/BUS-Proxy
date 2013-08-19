@@ -674,17 +674,6 @@ int reset_testCmd(char **argv,unsigned short argc){
     ctl_timeout_wait(ctl_get_current_time()+100);
     //call a function that is located at 0x170
     ((void (*)(void))0x170)();
-  }else if(!strcmp(argv[1],"SVS")){
-    //generate a watchdog timeout error
-    printf("Causing Simulated SVS reset\r\n");
-    //wait for chars to clear
-    ctl_timeout_wait(ctl_get_current_time()+100);
-    //call a function that is located at P1IN
-    SVSCTL=VLD0|PORON|SVSFG;
-    //disable interrupts
-    __disable_interrupt();
-    //call from the reset vector
-    (*(void (**)(void))0xFFFE)();
   }
   printf("Failed to generate error\r\n");
   return 0;
