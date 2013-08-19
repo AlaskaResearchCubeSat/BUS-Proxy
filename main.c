@@ -139,7 +139,14 @@ void sub_events(void *p) __toplevel{
 int main(void){
   unsigned char addr;
   const TERM_SPEC uart_term={"ARC Bus Test Program",UCA1_Getc};
-  //DO this first
+ 
+  //TESTING: setup error reporting library first
+  //setup error reporting library
+  error_init();
+  //TESTING: set log level to report everything by default
+  set_error_level(0);
+  
+//DO this first
   ARC_setup(); 
   
   //setup system specific peripherals
@@ -153,12 +160,7 @@ int main(void){
   //switch baud rate
   //UCA1_BR57600();
   
-  
-  //setup error reporting library
-  error_init();
-  //TESTING: set log level to report everything by default
-  set_error_level(0);
-  
+
   //setup P7 for LED's
   P7OUT=0x00;
   P7DIR=0xFF;
