@@ -672,8 +672,8 @@ int reset_testCmd(char **argv,unsigned short argc){
     printf("Causing invalid instruction fetch\r\n");
     //wait for chars to clear
     ctl_timeout_wait(ctl_get_current_time()+100);
-    //call a function that is located at P1IN
-    ((void (*)(void))0x20)();
+    //call a function that is located at 0x170
+    ((void (*)(void))0x170)();
   }else if(!strcmp(argv[1],"SVS")){
     //generate a watchdog timeout error
     printf("Causing Simulated SVS reset\r\n");
