@@ -623,12 +623,100 @@ int replayCmd(char **argv,unsigned short argc){
   return 0;
 }
 
+//cause an error and see how it is reported on reset
+int reset_testCmd(char **argv,unsigned short argc){
+  //mutex to abuse
+  CTL_MUTEX_t mutex;
+  //check what type of error to generate
+  if(!strcmp(argv[1],"mutex")){
+    //generate mutex unlock call error
+    printf("Causing a mutex unlock call error\r\n");
+    //wait for chars to clear
+    ctl_timeout_wait(ctl_get_current_time()+100);
+    //init mutex
+    ctl_mutex_init(&mutex);
+    //unlock mutex without locking this causes an error
+    ctl_mutex_unlock(&mutex);
+  }else if(!strcmp(argv[1],"isrCall")){
+    //generate unsupported call from ISR error
+    printf("Causing an unsupported call from ISR\r\n");
+    //wait for chars to clear
+    ctl_timeout_wait(ctl_get_current_time()+100);
+    //use P2 interrupts for software defined interrupts
+    P2IFG|=BIT0;
+    P2IE|=BIT0;
+  }else if(!strcmp(argv[1],"tasks")){
+    //generate no tasks to run error
+    printf("Causing a no tasks to run error\r\n");
+    //wait for chars to clear
+    ctl_timeout_wait(ctl_get_current_time()+100);
+    while(ctl_task_executing->next!=NULL){
+      ctl_task_remove(ctl_task_executing->next);
+    }
+    //call timer wait, this generates an error because we have killed all other tasks
+    ctl_timeout_wait(ctl_get_current_time()+100);
+  }else if(!strcmp(argv[1],"WDT")){
+    //generate a watchdog timeout error
+    printf("Causing watchdog reset\r\n");
+    //wait for chars to clear
+    ctl_timeout_wait(ctl_get_current_time()+100);
+    WDTCTL=0;
+  }else if(!strcmp(argv[1],"flash")){
+    //generate a watchdog timeout error
+    printf("Causing a flash security key violation\r\n");
+    //wait for chars to clear
+    ctl_timeout_wait(ctl_get_current_time()+100);
+    FCTL1=0;
+  }else if(!strcmp(argv[1],"fetch")){
+    //generate a watchdog timeout error
+    printf("Causing invalid instruction fetch\r\n");
+    //wait for chars to clear
+    ctl_timeout_wait(ctl_get_current_time()+100);
+    //call a function that is located at 0x170
+    ((void (*)(void))0x170)();
+  }
+  printf("Failed to generate error\r\n");
+  return 0;
+}
+  
+//P2.0 interrupt is used as a software interrupt to trigger an unsupported call from ISR error
+void error_ISR(void) __ctl_interrupt[PORT2_VECTOR]{
+  unsigned char flags=P2IFG&P2IE;
+  P2IFG&=~flags;
+  //Check for bit zero
+  if(flags&BIT0){
+    //make an unsupported call from ISR
+    ctl_timeout_wait(0);
+  }
+}
+
+
+//print the status of each tasks stack
+int stackCmd(char **argv,unsigned short argc){
+  extern CTL_TASK_t *ctl_task_list;
+  int i;
+  CTL_TASK_t *t=ctl_task_list;
+  //format string
+  const char *fmt="%-10s\t%lp\t%lp\t%li\r\n";
+  //print out nice header
+  printf("\r\nName\tPointer\tStart\tRemaining\r\n--------------------------------------------------------------------\r\n");
+  //loop through tasks and print out info
+  while(t!=NULL){
+    printf(fmt,t->name,t->stack_pointer,t->stack_start,t->stack_pointer-t->stack_start);
+    t=t->next;
+  }
+  //add a blank line after table
+  printf("\r\n");
+  return 0;
+}
+
 
 //table of commands with help
 const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or help on a spesific command.",helpCmd},
                          {"priority"," task [priority]\r\n\t""Get/set task priority.",priorityCmd},
                          {"timeslice"," [period]\r\n\t""Get/set ctl_timeslice_period.",timesliceCmd},
                          {"stats","\r\n\t""Print task status",statsCmd},
+                         {"stack","\r\n\t""Print task stack status",stackCmd},
                          {"reset","\r\n\t""reset the msp430.",restCmd},
                          {"addr"," [addr]\r\n\t""Get/Set I2C address.",addrCmd},
                          {"tx"," [noACK] [noNACK] addr ID [[data0] [data1]...]\r\n\t""send data over I2C to an address",txCmd},
@@ -641,5 +729,6 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                          {"rec","\r\n\t""Recive async data",recCmd},
                          {"search","\r\n\t""Find devices on the bus",ARCsearch_Cmd},
                          {"replay","\r\n\t""Replay errors from log",replayCmd},
+                         {"tstrst","error\r\n\t""Cause An error that causes a reset",reset_testCmd},
                          //end of list
                          {NULL,NULL,NULL}};

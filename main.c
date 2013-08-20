@@ -137,6 +137,7 @@ void sub_events(void *p) __toplevel{
 }
 
 int main(void){
+  unsigned char addr;
   const TERM_SPEC uart_term={"ARC Bus Test Program",UCA1_Getc};
   //DO this first
   ARC_setup(); 
@@ -145,6 +146,10 @@ int main(void){
 
   //setup mmc interface
   //mmcInit_msp();
+
+
+  //TESTING: set log level to report everything by default
+  set_error_level(0);
  
  
   //setup UCA1 UART
@@ -152,12 +157,7 @@ int main(void){
   //switch baud rate
   //UCA1_BR57600();
   
-  
-  //setup error reporting library
-  error_init();
-  //TESTING: set log level to report everything by default
-  set_error_level(0);
-  
+
   //setup P7 for LED's
   P7OUT=0x00;
   P7DIR=0xFF;
@@ -169,8 +169,15 @@ int main(void){
   P8DIR=0xFF;
   P8SEL=0x00;
   
+  //read address
+  addr=*((char*)0x01000);
+  //check if address is valid
+  if(addr&0x7F){
+    //use ACDS address as default
+    addr=BUS_ADDR_ACDS;
+  }
   //setup bus interface
-  initARCbus(*((char*)0x01000));
+  initARCbus(addr);
 
   //initialize stacks
   memset(stack1,0xcd,sizeof(stack1));  // write known values into the stack
