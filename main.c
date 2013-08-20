@@ -139,20 +139,17 @@ void sub_events(void *p) __toplevel{
 int main(void){
   unsigned char addr;
   const TERM_SPEC uart_term={"ARC Bus Test Program",UCA1_Getc};
- 
-  //TESTING: setup error reporting library first
-  //setup error reporting library
-  error_init();
-  //TESTING: set log level to report everything by default
-  set_error_level(0);
-  
-//DO this first
+  //DO this first
   ARC_setup(); 
   
   //setup system specific peripherals
 
   //setup mmc interface
   //mmcInit_msp();
+
+
+  //TESTING: set log level to report everything by default
+  set_error_level(0);
  
  
   //setup UCA1 UART
