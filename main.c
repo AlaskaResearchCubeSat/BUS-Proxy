@@ -173,8 +173,8 @@ int main(void){
   addr=*((char*)0x01000);
   //check if address is valid
   if(addr&0x7F){
-    //use ACDS address as default
-    addr=BUS_ADDR_ACDS;
+    //default to unused address
+    addr=0x1F;
   }
   //setup bus interface
   initARCbus(addr);

@@ -11,7 +11,6 @@
 #include <commandLib.h>
 #include "Proxy_errors.h"
 
-
 //change the stored I2C address. this does not change the address for the I2C peripheral
 int addrCmd(char **argv,unsigned short argc){
   //unsigned long addr;
@@ -205,10 +204,115 @@ int reportCmd(char **argv,unsigned short argc){
   return 0;
 }
 
+//define a handy-dandy macro
+#define ARRAY_SIZE(a)   (sizeof(a)/sizeof(a[0]))
+
+int baudCmd(char **argv,unsigned short argc){
+  enum {BAUD_SHOW,BAUD_SET,BAUD_SAVE,BAUD_LIST};
+  int action=BAUD_SHOW,baud,i,idx;
+  float rate;
+  const int bauds[]={9600,38400,57600};
+  void (*const fp[])(void)={UCA1_BR9600,UCA1_BR38400,UCA1_BR57600};
+  if(argc>0){
+    if(!strcmp("show",argv[1])){
+      //show baud rate
+      action=BAUD_SHOW;
+    }else if(!strcmp("set",argv[1])){
+        if(argc<2){
+          printf("Error : %s set requires one argument\r\n",argv[1]);
+          return -1;
+        }
+        //get baud rate from argument
+        baud=atoi(argv[2]);
+        //check if rate is valid
+        for(i=0,idx=-1;i<ARRAY_SIZE(bauds);i++){
+          if(bauds[i]==baud){
+            idx=i;
+            break;
+          }
+        }
+        if(idx==-1){
+          printf("Error: unknown baud rate %i\r\n",baud);
+          action=BAUD_LIST;
+        }else{
+          //set baud rate
+          action=BAUD_SET;
+        }
+    }else if(!strcmp("save",argv[1])){
+        action=BAUD_SAVE;
+    }else if(!strcmp("list",argv[1])){
+        action=BAUD_LIST;
+    }else{
+      printf("Error: unknown action %s\r\n",argv[1]);
+      return -3;
+    }
+  }
+  switch(action){
+    case BAUD_SHOW:
+      //check if using Oversampeling mode
+      if(UCOS16&UCA1MCTL){
+        //Get prescaler
+        rate=16*((unsigned short)UCA1BR0)|(((unsigned short)UCA1BR1)<<8);
+        rate+=((UCA1MCTL&(UCBRF3|UCBRF2|UCBRF1|UCBRF0))>>4)/(float)16;
+      }else{
+        //Get prescaler
+        rate=((unsigned short)UCA1BR0)|(((unsigned short)UCA1BR1)<<8);
+        //get modulator setting
+        rate+=((UCA1MCTL&(UCBRS2|UCBRS1|UCBRS0))>>1)/(float)8;
+          
+      }
+      //check which clock is used
+      switch(UCA1CTL1&(UCSSEL1|UCSSEL0)){
+         case UCSSEL_0:
+            printf("External clock used. Baud Rate Unknown.\r\n");
+          return 0;
+         case UCSSEL_1:
+            //ACLK used, this is 32.768kHz xtal
+            rate=32768/rate;
+         break;
+         case UCSSEL_2:
+         case UCSSEL_3:
+            //SMCLK used this is DCO at 16MHz
+            rate=16000000/rate;
+         break;
+      }
+      printf("Baud Rate is %u\r\n",(unsigned short)rate);
+    break;
+    case BAUD_SET:
+      printf("Setting New baud rate\r\n");
+      //wait for chars to be transmitted
+      while(UCA1_CheckBusy()){          
+        ctl_timeout_wait(ctl_get_current_time()+100);
+      }
+      //double check idx
+      if(idx<0 || idx>=ARRAY_SIZE(fp)){
+        printf("Error: internal error bad index %i\r\n",idx);
+        return -4;
+      }
+      //call function from array
+      fp[idx]();
+      //print message in new baud rate
+      printf("New baud rate set.\r\n");
+    break;
+    case BAUD_SAVE:
+       //TODO: impliment save
+       printf("Error: save is not implemented yet\r\n");
+    break;
+    case BAUD_LIST:
+      printf("Available baud rates:\r\n");
+      for(i=0;i<ARRAY_SIZE(bauds);i++){
+        printf("%8u\r\n",bauds[i]);
+      }
+    break;
+  }
+  return 0;
+}
+
 //table of commands with help
 const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or help on a spesific command.",helpCmd},
                          CTL_COMMANDS,ARC_COMMANDS,REPLAY_ERROR_COMMAND,ARC_ASYNC_PROXY_COMMAND,
                          {"addr"," [addr]\r\n\t""Get/Set I2C address.",addrCmd},
+                         {"baud"," [show|set|save|list] [rate]\r\n\t""Get/Set UART baud rate.",baudCmd},
                          {"tst"," addr len\r\n\t""Send test data to addr.",tstCmd},
                          {"tstrst","error\r\n\t""Cause An error that causes a reset",reset_testCmd},
                          {"report","lev src err arg\r\n\t""Report an error",reportCmd},
