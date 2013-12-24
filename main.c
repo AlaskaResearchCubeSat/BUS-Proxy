@@ -9,6 +9,7 @@
 #include "timerA.h"
 #include "Proxy_errors.h"
 #include <terminal.h>
+#include "flash.h"
 
 CTL_TASK_t tasks[3];
 
@@ -154,8 +155,6 @@ int main(void){
  
   //setup UCA1 UART
   UCA1_init_UART();
-  //switch baud rate
-  //UCA1_BR57600();
   
 
   //setup P7 for LED's
@@ -169,12 +168,34 @@ int main(void){
   P8DIR=0xFF;
   P8SEL=0x00;
   
-  //read address
-  addr=*((char*)0x01000);
-  //check if address is valid
-  if(addr&0x7F){
-    //default to unused address
-    addr=0x1F;
+  
+  //set default address, an unused address
+  addr=0x1F;
+  //check if settings are valid
+  if(saved_settings->magic==SAVED_SETTINGS_MAGIC){
+    //check if address is valid
+    if(addr&0x7F){
+      //get address
+      addr=saved_settings->addr;
+    }
+    //check if UART settings are valid
+    if(saved_settings->clk&(UCSSEL0|UCSSEL1)){
+      //disable interrupts
+      UC1IE&=~(UCA1TXIE|UCA1RXIE);
+      //put module into reset mode
+      UCA1CTL1|=UCSWRST;
+      UCA1BR0=saved_settings->br0;
+      UCA1BR1=saved_settings->br1;
+      UCA1MCTL=saved_settings->mctl;
+      //clear clock bits
+      UCA1CTL1&=~(UCSSEL0|UCSSEL1);
+      UCA1CTL1|=saved_settings->clk;
+      //take UCA1 out of reset mode
+      UCA1CTL1&=~UCSWRST;
+      //enable interrupts
+      UC1IE|=UCA1TXIE|UCA1RXIE;
+    }
+        
   }
   //setup bus interface
   initARCbus(addr);

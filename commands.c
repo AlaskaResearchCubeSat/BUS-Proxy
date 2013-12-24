@@ -10,25 +10,9 @@
 #include <Error.h>
 #include <commandLib.h>
 #include "Proxy_errors.h"
+#include "flash.h"
 
-//change the stored I2C address. this does not change the address for the I2C peripheral
-int addrCmd(char **argv,unsigned short argc){
-  //unsigned long addr;
-  //unsigned char tmp;
-  //char *end;
-  unsigned char addr;
-  if(argc==0){
-    printf("I2C address = 0x%02X\r\n",*(unsigned char*)0x01000);
-    return 0;
-  }
-  if(argc>1){
-    printf("Error : too many arguments\r\n");
-    return 1;
-  }
-  addr=getI2C_addr(argv[1],1,busAddrSym);
-  if(addr==0xFF){
-    return 1;
-  }
+void write_settings(FLASH_SETTINGS *set){
   //erase address section
   //first disable watchdog
   WDT_STOP();
@@ -37,17 +21,51 @@ int addrCmd(char **argv,unsigned short argc){
   //setup flash for erase
   FCTL1=FWKEY|ERASE;
   //dummy write to indicate which segment to erase
-  *((char*)0x01000)=0;
+  saved_settings->magic=0;
   //enable writing
   FCTL1=FWKEY|WRT;
-  //write address
-  *((char*)0x01000)=addr;
+  //write settings
+  memcpy(saved_settings,set,sizeof(FLASH_SETTINGS));
   //disable writing
   FCTL1=FWKEY;
   //lock flash
   FCTL3=FWKEY|LOCK;
   //Kick WDT to restart it
   WDT_KICK();
+}
+
+//change the stored I2C address. this does not change the address for the I2C peripheral
+int addrCmd(char **argv,unsigned short argc){
+  //unsigned long addr;
+  //unsigned char tmp;
+  FLASH_SETTINGS tmp;
+  //char *end;
+  unsigned char addr;
+  if(argc==0){
+    printf("I2C address = 0x%02X\r\n",saved_settings->addr);
+    return 0;
+  }
+  if(argc>1){
+    printf("Error : too many arguments\r\n");
+    return 1;
+  }
+  //copy saved settings if they are valid
+  if(saved_settings->magic==SAVED_SETTINGS_MAGIC){
+    memcpy(&tmp,saved_settings,sizeof(FLASH_SETTINGS));
+  }else{
+    //mark UART settings as invalid by zeroing the clock register
+    tmp.clk=0xFF;
+  }
+  //set magic value
+  tmp.magic=SAVED_SETTINGS_MAGIC;
+  
+  //get address
+  tmp.addr=getI2C_addr(argv[1],1,busAddrSym);
+  if(tmp.addr==0xFF){
+    return 1;
+  }
+  //write settings to flash
+  write_settings(&tmp);
   //print out message
   printf("I2C Address Changed. Changes will not take effect until after reset.\r\n");
   return 0;
@@ -211,6 +229,7 @@ int baudCmd(char **argv,unsigned short argc){
   enum {BAUD_SHOW,BAUD_SET,BAUD_SAVE,BAUD_LIST};
   int action=BAUD_SHOW,baud,i,idx;
   float rate;
+  FLASH_SETTINGS tmp;
   const int bauds[]={9600,38400,57600};
   void (*const fp[])(void)={UCA1_BR9600,UCA1_BR38400,UCA1_BR57600};
   if(argc>0){
@@ -295,8 +314,24 @@ int baudCmd(char **argv,unsigned short argc){
       printf("New baud rate set.\r\n");
     break;
     case BAUD_SAVE:
-       //TODO: impliment save
-       printf("Error: save is not implemented yet\r\n");
+      //copy saved settings if they are valid
+      if(saved_settings->magic==SAVED_SETTINGS_MAGIC){
+        memcpy(&tmp,saved_settings,sizeof(FLASH_SETTINGS));
+      }else{
+        //mark address as invalid
+        tmp.addr=0xFF;
+      }
+      //set magic value
+      tmp.magic=SAVED_SETTINGS_MAGIC;
+      //copy settings from UART
+      tmp.br0=UCA1BR0;
+      tmp.br1=UCA1BR1;
+      tmp.mctl=UCA1MCTL;
+      tmp.clk=UCA1CTL1&(UCSSEL1|UCSSEL0);
+      //write settings to flash
+      write_settings(&tmp);
+      //print confermation
+      printf("UART settings written to flash.\r\n");
     break;
     case BAUD_LIST:
       printf("Available baud rates:\r\n");
