@@ -54,7 +54,7 @@ int addrCmd(char **argv,unsigned short argc){
     memcpy(&tmp,saved_settings,sizeof(FLASH_SETTINGS));
   }else{
     //mark UART settings as invalid by zeroing the clock register
-    tmp.clk=0xFF;
+    tmp.clk=0;
   }
   //set magic value
   tmp.magic=SAVED_SETTINGS_MAGIC;
