@@ -88,7 +88,7 @@ int printCmd(char **argv,unsigned short argc){
   }
   //setup packet 
   ptr=BUS_cmd_init(buff,6);
-  //coppy strings into buffer for sending
+  //copy strings into buffer for sending
   for(i=2,k=0;i<=argc && k<sizeof(buff);i++){
     j=0;
     while(argv[i][j]!=0){
@@ -330,7 +330,7 @@ int baudCmd(char **argv,unsigned short argc){
       tmp.clk=UCA1CTL1&(UCSSEL1|UCSSEL0);
       //write settings to flash
       write_settings(&tmp);
-      //print confermation
+      //print conformation
       printf("UART settings written to flash.\r\n");
     break;
     case BAUD_LIST:
