@@ -167,6 +167,10 @@ int main(void){
   P8OUT=0x00;
   P8DIR=0xFF;
   P8SEL=0x00;
+
+  //setup P5.7 for SVSOUT
+  P5DIR|=BIT7;
+  P5SEL|=BIT7;
   
   
   //set default address, an unused address
