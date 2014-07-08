@@ -13,8 +13,11 @@
 #include "flash.h"
 
 void write_settings(FLASH_SETTINGS *set){
+  int en;
   //erase address section
-  //first disable watchdog
+  //disable interrupts
+  en = BUS_stop_interrupts();
+  //disable watchdog
   WDT_STOP();
   //unlock flash memory
   FCTL3=FWKEY;
@@ -30,8 +33,8 @@ void write_settings(FLASH_SETTINGS *set){
   FCTL1=FWKEY;
   //lock flash
   FCTL3=FWKEY|LOCK;
-  //Kick WDT to restart it
-  WDT_KICK();
+  //re-enable interrupts if enabled before
+  BUS_restart_interrupts(en);
 }
 
 //change the stored I2C address. this does not change the address for the I2C peripheral
