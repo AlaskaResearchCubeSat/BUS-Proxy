@@ -346,6 +346,28 @@ int baudCmd(char **argv,unsigned short argc){
   return 0;
 }
 
+int wdttstCmd(char **argv,unsigned short argc){
+    unsigned long delay;
+    int en,i;
+    unsigned short r1,r2,r3;
+    //read sector
+    if(1!=sscanf(argv[1],"%lu",&delay)){
+      //print error
+      printf("Error parsing delay \"%s\"\r\n",argv[1]);
+      return -3;
+    }  
+    //disable interrupts
+    en = BUS_stop_interrupts();
+    //disable watchdog
+    WDT_STOP();
+    for(;delay!=0;delay--);
+    //re-enable interrupts if enabled before
+    BUS_restart_interrupts(en);
+    //Print success message
+    printf("Delay Complete\r\n");
+    return 0;
+}
+
 //table of commands with help
 const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or help on a spesific command.",helpCmd},
                          CTL_COMMANDS,ARC_COMMANDS,REPLAY_ERROR_COMMAND,ERROR_LOG_LEVEL_COMMAND,ARC_ASYNC_PROXY_COMMAND,ARC_SPI_DREAD,
@@ -354,5 +376,6 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                          {"tst"," addr len\r\n\t""Send test data to addr.",tstCmd},
                          {"tstrst","error\r\n\t""Cause An error that causes a reset",reset_testCmd},
                          {"report","lev src err arg\r\n\t""Report an error",reportCmd},
+                         {"wdttst","delay""\r\n\t""Stop watchdog and disable interrupts for a bit",wdttstCmd},
                          //end of list
                          {NULL,NULL,NULL}};
