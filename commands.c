@@ -39,13 +39,26 @@ void write_settings(FLASH_SETTINGS *set){
 
 //change the stored I2C address. this does not change the address for the I2C peripheral
 int addrCmd(char **argv,unsigned short argc){
-  //unsigned long addr;
-  //unsigned char tmp;
+  const char *name;
   FLASH_SETTINGS tmp;
   //char *end;
   unsigned char addr;
   if(argc==0){
-    printf("I2C address = 0x%02X\r\n",saved_settings->addr);
+    addr=(~UCGCEN)&UCB0I2COA;
+    name=I2C_addr_revlookup(addr,busAddrSym);
+    if(name!=NULL){
+        printf("I2C address = 0x%02X (%s)\r\n",addr,name);
+    }else{
+        printf("I2C address = 0x%02X\r\n",addr);
+    }
+    if(saved_settings->addr!=addr){
+        name=I2C_addr_revlookup(saved_settings->addr,busAddrSym);
+        if(name!=NULL){
+            printf("Saved address = 0x%02X (%s)\r\n",saved_settings->addr,name);
+        }else{
+            printf("Saved address = 0x%02X\r\n",saved_settings->addr);
+        }               
+    }    
     return 0;
   }
   if(argc>1){
