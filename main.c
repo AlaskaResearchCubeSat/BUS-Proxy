@@ -15,7 +15,7 @@ CTL_TASK_t tasks[3];
 
 //stacks for tasks
 unsigned stack1[1+200+1];          
-unsigned stack2[1+500+1];
+unsigned stack2[1+700+1];
 unsigned stack3[1+150+1];   
 
 CTL_EVENT_SET_t cmd_parse_evt;
