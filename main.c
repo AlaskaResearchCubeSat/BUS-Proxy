@@ -102,9 +102,6 @@ void sub_events(void *p) __toplevel{
       //send command
       BUS_cmd_tx(BUS_ADDR_CDH,buf,0,0,BUS_I2C_SEND_FOREGROUND);
     }
-    if(e&SUB_EV_TIME_CHECK){
-      printf("time ticker = %li\r\n",get_ticker_time());
-    }
     if(e&SUB_EV_SPI_DAT){
       puts("SPI data recived:\r");
       //get length
@@ -119,8 +116,11 @@ void sub_events(void *p) __toplevel{
       BUS_free_buffer_from_event();
     }
     if(e&SUB_EV_SPI_ERR_CRC){
-      //puts("SPI bad CRC\r");
+      puts("SPI bad CRC\r");
       report_error(ERR_LEV_ERROR,PROXY_ERR_SRC_SUBSYSTEM,SUB_ERR_SPI_CRC,0);
+    }
+    if(e&SUB_EV_SPI_ERR_BUSY){
+      puts("SPI Busy\r");
     }
     if(e&SUB_EV_ASYNC_OPEN){
       //kill off the terminal
