@@ -87,80 +87,6 @@ int addrCmd(char **argv,unsigned short argc){
   return 0;
 }
 
-int printCmd(char **argv,unsigned short argc){
-  unsigned char buff[40],*ptr,id;
-  unsigned char addr;
-  unsigned short len;
-  int i,j,k;
-  //check number of arguments
-  if(argc<2){
-    printf("Error : too few arguments.\r\n");
-    return 1;
-  }
-  //get address
-  addr=getI2C_addr(argv[1],0,busAddrSym);
-  if(addr==0xFF){
-    return 1;
-  }
-  //setup packet 
-  ptr=BUS_cmd_init(buff,6);
-  //copy strings into buffer for sending
-  for(i=2,k=0;i<=argc && k<sizeof(buff);i++){
-    j=0;
-    while(argv[i][j]!=0){
-      ptr[k++]=argv[i][j++];
-    }
-    ptr[k++]=' ';
-  }
-  //get length
-  len=k;
-  //TESTING: set pin high
-  P8OUT|=BIT0;
-  //send command
-  BUS_cmd_tx(addr,buff,len,0,BUS_I2C_SEND_FOREGROUND);
-  //TESTING: set pin low
-  P8OUT&=~BIT0;
-  return 0;
-}
-
-int tstCmd(char **argv,unsigned short argc){
-  unsigned char buff[40],*ptr,*end;
-  unsigned char addr;
-  unsigned short len;
-  int i,j,k;
-  //check number of arguments
-  if(argc<2){
-    printf("Error : too few arguments.\r\n");
-    return 1;
-  }
-  if(argc>2){
-    printf("Error : too many arguments.\r\n");
-    return 1;
-  }
-  //get address
-  addr=getI2C_addr(argv[1],0,busAddrSym);
-  len = atoi(argv[2]);
-  /*if(len<0){
-    printf("Error : bad length");
-    return 2;
-  }*/
-  //setup packet 
-  ptr=BUS_cmd_init(buff,7);
-  //fill packet with dummy data
-  for(i=0;i<len;i++){
-    ptr[i]=i;
-  }
-  //TESTING: set pin high
-  P8OUT|=BIT0;
-  //send command
-  BUS_cmd_tx(addr,buff,len,0,BUS_I2C_SEND_FOREGROUND);
-  //TESTING: wait for transaction to fully complete
-  while(UCB0STAT&UCBBUSY);
-  //TESTING: set pin low
-  P8OUT&=~BIT0;
-  return 0;
-}
-
 //cause an error and see how it is reported on reset
 int reset_testCmd(char **argv,unsigned short argc){
   //mutex to abuse
@@ -365,7 +291,6 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                          CTL_COMMANDS,ARC_COMMANDS,REPLAY_ERROR_COMMAND,ERROR_LOG_LEVEL_COMMAND,ARC_ASYNC_PROXY_COMMAND,ARC_SPI_DREAD,
                          {"addr"," [addr]\r\n\t""Get/Set I2C address.",addrCmd},
                          {"baud"," [show|set|save|list] [rate]\r\n\t""Get/Set UART baud rate.",baudCmd},
-                         {"tst"," addr len\r\n\t""Send test data to addr.",tstCmd},
                          {"tstrst","error\r\n\t""Cause An error that causes a reset",reset_testCmd},
                          {"report","lev src err arg\r\n\t""Report an error",reportCmd},
                          //end of list
