@@ -131,21 +131,8 @@ void sub_events(void *p) __toplevel{
       puts("SPI Busy\r");
     }
     if(e&SUB_EV_ASYNC_OPEN){
-      //kill off the terminal
-      /*ctl_task_remove(&tasks[1]);
-      //setup closed event
-      async_setup_close_event(&SUB_events,SUB_EV_ASYNC_CLOSE);
-      //setup UART terminal        
-      ctl_task_run(&tasks[1],2,terminal,"\rRemote Terminal started\r\n","async_terminal",sizeof(stack2)/sizeof(stack2[0])-2,stack2+1,0);
-      //print message
-      printf("Async Opened from 0x%02X\r\n",async_addr);*/
+      //close async connection, not supported
       async_close();
-    }
-    if(e&SUB_EV_ASYNC_CLOSE){
-      //kill off async terminal
-      //ctl_task_remove(&tasks[1]);
-      //setup UART terminal        
-      //ctl_task_run(&tasks[1],2,terminal,"\rUart Terminal Started\r\n","terminal",sizeof(stack2)/sizeof(stack2[0])-2,stack2+1,0);
     }
   }
 }
