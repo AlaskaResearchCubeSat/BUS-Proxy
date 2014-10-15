@@ -104,18 +104,24 @@ void sub_events(void *p) __toplevel{
       BUS_cmd_tx(BUS_ADDR_CDH,buf,0,0,BUS_I2C_SEND_FOREGROUND);
     }
     if(e&SUB_EV_SPI_DAT){
-      puts("SPI data recived:\r");
-      //get length
-      len=arcBus_stat.spi_stat.len;
-      //print out data
-      for(i=0;i<len;i++){
-        //printf("0x%02X ",rx[i]);
-        printf("%03i ",arcBus_stat.spi_stat.rx[i]);
-      }
-      printf("\r\n");
-      //free buffer
-      BUS_free_buffer_from_event();
-      
+        //get length
+        len=arcBus_stat.spi_stat.len;
+        switch(arcBus_stat.spi_stat.rx[1]){
+          case SPI_ERROR_DAT:
+            //print errors
+            print_spi_err(arcBus_stat.spi_stat.rx,len);
+          break;
+          default:
+              puts("Unknown SPI data recived:\r");
+              //print out data
+              for(i=0;i<len;i++){
+                //printf("0x%02X ",rx[i]);
+                printf("%03i ",arcBus_stat.spi_stat.rx[i]);
+              }
+              printf("\r\n");
+        }
+        //free buffer
+        BUS_free_buffer_from_event();
     }
     if(e&SUB_EV_SPI_ERR_CRC){
       puts("SPI bad CRC\r");
