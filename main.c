@@ -23,6 +23,7 @@ CTL_EVENT_SET_t cmd_parse_evt;
 unsigned char buffer[80];
 
 
+
 //set printf and friends to send chars out UCA1 uart
 int __putchar(int c){
   //don't print if async connection is open
@@ -114,6 +115,7 @@ void sub_events(void *p) __toplevel{
       printf("\r\n");
       //free buffer
       BUS_free_buffer_from_event();
+      
     }
     if(e&SUB_EV_SPI_ERR_CRC){
       puts("SPI bad CRC\r");
@@ -166,11 +168,6 @@ int main(void){
   P7DIR=0xFF;
   
   P7OUT|=BIT0;
-
-  //setup P8 for output
-  P8OUT=0x00;
-  P8DIR=0xFF;
-  P8SEL=0x00;
 
   //setup P5.7 for SVSOUT
   P5DIR|=BIT7;
