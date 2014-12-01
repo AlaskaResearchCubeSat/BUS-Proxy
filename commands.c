@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <msp430.h>
 #include <ctl_api.h>
+#include <ctl_api.h>
 #include <terminal.h>
 #include <ARCbus.h>
 #include <UCA1_uart.h>
@@ -11,6 +12,9 @@
 #include <commandLib.h>
 #include "Proxy_errors.h"
 #include "flash.h"
+
+// This isnt working for some reason. Did I mess it up?
+#define busAddrSym 0
 
 void write_settings(FLASH_SETTINGS *set){
   int en;
@@ -31,6 +35,7 @@ void write_settings(FLASH_SETTINGS *set){
   memcpy(saved_settings,set,sizeof(FLASH_SETTINGS));
   //disable writing
   FCTL1=FWKEY;
+
   //lock flash
   FCTL3=FWKEY|LOCK;
   //re-enable interrupts if enabled before
@@ -381,6 +386,103 @@ int wdttstCmd(char **argv,unsigned short argc){
     return 0;
 }
 
+int imagertakepic(char **argv,unsigned short argc){
+  unsigned char val = 0;
+  unsigned char dat[4 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
+  // 14 is takepic, 15 is loadpic
+
+  if(argc < 1)
+  {
+    printf("Please specify a sector.\r\n");
+    return -1;
+  }
+  if(sscanf(argv[1],"%i",&val)!=1)
+  {
+     printf("Invalid sector.\r\n");
+     return -1;
+  }
+  
+  printf("Sector is \"%i\"\r\n",val);
+  
+  //initialize packet     // ID is 14
+  payload=BUS_cmd_init(dat,14);
+  //set payload
+  payload[0]=val;
+  payload[1]=0;
+  payload[2]=0;
+  payload[3]=0;
+  //send packet
+  BUS_cmd_tx(BUS_ADDR_IMG,dat,4,0,BUS_I2C_SEND_FOREGROUND);
+  return 0;
+}
+
+int imagerloadpic(char **argv,unsigned short argc){
+  unsigned char val = 0;
+  unsigned char dat[4 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
+  // 14 is takepic, 15 is loadpic
+
+  if(argc < 1)
+  {
+    printf("Please specify a sector.\r\n");
+    return -1;
+  }
+  if(sscanf(argv[1],"%i",&val)!=1)
+  {
+     printf("Invalid sector.\r\n");
+     return -1;
+  }
+  
+  printf("Sector is \"%i\"\r\n",val);
+  
+  //initialize packet     // ID is 15
+  payload=BUS_cmd_init(dat,15);
+  //set payload
+  payload[0]=val;
+  payload[1]=0;
+  payload[2]=0;
+  payload[3]=0;
+  //send packet
+  BUS_cmd_tx(BUS_ADDR_IMG,dat,4,0,BUS_I2C_SEND_FOREGROUND);
+  return 0;
+}
+
+int schedulepic(char **argv,unsigned short argc){
+  unsigned long val = 0;
+  unsigned char dat[4 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
+  // 14 is takepic, 15 is loadpic, 13 is schedule pic
+
+  if(argc < 1)
+  {
+    printf("Please specify a time.\r\n");
+    return -1;
+  }
+  if(sscanf(argv[1],"%lu",&val)!=1)
+  {
+     printf("Invalid time.\r\n");
+     return -1;
+  }
+  
+  printf("Time is \"%i\"\r\n",val);
+  
+  //initialize packet     // ID is 15
+  payload=BUS_cmd_init(dat,13);
+  //set payload
+  payload[0]=(val >> 24) & 0xFF;;
+  payload[1]=(val >> 16) & 0xFF;
+  payload[2]=(val >> 8) & 0xFF;
+  payload[3]=val & 0xFF;
+  //send packet
+  BUS_cmd_tx(BUS_ADDR_IMG,dat,4,0,BUS_I2C_SEND_FOREGROUND);
+  return 0;
+}
+
+
+
+int bufferlen(char **argv,unsigned short argc){
+  printf("Buffer size is %i\r\n",BUS_get_buffer_size());
+  return 0;
+}
+
 //table of commands with help
 const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or help on a spesific command.",helpCmd},
                          CTL_COMMANDS,ARC_COMMANDS,REPLAY_ERROR_COMMAND,ERROR_LOG_LEVEL_COMMAND,ARC_ASYNC_PROXY_COMMAND,ARC_SPI_DREAD,
@@ -390,5 +492,9 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                          {"tstrst","error\r\n\t""Cause An error that causes a reset",reset_testCmd},
                          {"report","lev src err arg\r\n\t""Report an error",reportCmd},
                          {"wdttst","delay""\r\n\t""Stop watchdog and disable interrupts for a bit",wdttstCmd},
+                         {"imagertakepic","Send a message to the imager to tell it that it should take a picture",imagertakepic},
+                         {"imagerloadpic","Send a message to the imager to tell it that it should load it's most recent picture and send it over SPI",imagerloadpic},
+                         {"buffersize","Get the size of the buffer",bufferlen},
+                         {"schedulepic","Schedule a picture to be taken",schedulepic},
                          //end of list
                          {NULL,NULL,NULL}};

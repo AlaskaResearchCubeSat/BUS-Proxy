@@ -1,3 +1,4 @@
+// MODIFIED
 #include <msp430.h>
 #include <ctl_api.h>
 #include <stdio.h>
@@ -16,11 +17,13 @@ CTL_TASK_t tasks[3];
 //stacks for tasks
 unsigned stack1[1+200+1];          
 unsigned stack2[1+500+1];
-unsigned stack3[1+150+1];   
+unsigned stack3[1+150+1];  
 
 CTL_EVENT_SET_t cmd_parse_evt;
 
 unsigned char buffer[80];
+
+unsigned char reportReceived = 1;
 
 
 //set printf and friends to send chars out UCA1 uart
@@ -81,6 +84,7 @@ void sub_events(void *p) __toplevel{
   unsigned int e,len;
   int i;
   unsigned char buf[10],*ptr;
+  
   extern unsigned char async_addr;
   for(;;){
     e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&SUB_events,SUB_EV_ALL|SUB_EV_ASYNC_OPEN|SUB_EV_ASYNC_CLOSE,CTL_TIMEOUT_NONE,0);
@@ -98,25 +102,31 @@ void sub_events(void *p) __toplevel{
       //setup packet 
       //TODO: put actual command for subsystem response
       ptr=BUS_cmd_init(buf,20);
-      //TODO: fill in telemitry data
+      //TODO: fill in telemetry data
       //send command
       BUS_cmd_tx(BUS_ADDR_CDH,buf,0,0,BUS_I2C_SEND_FOREGROUND);
     }
-    if(e&SUB_EV_TIME_CHECK){
+    /*if(e&SUB_EV_TIME_CHECK){
       printf("time ticker = %li\r\n",get_ticker_time());
-    }
+    }*/
     if(e&SUB_EV_SPI_DAT){
-      puts("SPI data recived:\r");
-      //get length
-      len=arcBus_stat.spi_stat.len;
-      //print out data
-      for(i=0;i<len;i++){
-        //printf("0x%02X ",rx[i]);
-        printf("%03i ",arcBus_stat.spi_stat.rx[i]);
-      }
-      printf("\r\n");
-      //free buffer
-      BUS_free_buffer_from_event();
+        
+        // Get length of incoming data
+        len=arcBus_stat.spi_stat.len;
+
+        // If this is a block from an image (checking by length)
+        if(len == 512 + BUS_SPI_CRC_LEN + 3)
+        {
+          // Print out data received from SD card
+          printf("Received bytes from image #%i section #%i:\r\n",arcBus_stat.spi_stat.rx[512],arcBus_stat.spi_stat.rx[513]);
+          for(i=0;i<512;i++){
+            printf("%03i ",arcBus_stat.spi_stat.rx[i]);
+          }
+          printf("\r\nSD card response was \"%i\" \r\n\r\n",arcBus_stat.spi_stat.rx[514]);
+        }
+        
+        //free buffer
+        BUS_free_buffer_from_event();
     }
     if(e&SUB_EV_SPI_ERR_CRC){
       //puts("SPI bad CRC\r");
