@@ -13,9 +13,6 @@
 #include "Proxy_errors.h"
 #include "flash.h"
 
-// This isnt working for some reason. Did I mess it up?
-#define busAddrSym 0
-
 void write_settings(FLASH_SETTINGS *set){
   int en;
   //erase address section
