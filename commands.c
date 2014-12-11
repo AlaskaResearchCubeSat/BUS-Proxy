@@ -345,7 +345,7 @@ int imagerloadpic(char **argv,unsigned short argc){
 }
 
 int schedulepic(char **argv,unsigned short argc){
-  unsigned long val = 0;
+  ticker val = 0;
   unsigned char dat[4 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
   // 14 is takepic, 15 is loadpic, 13 is schedule pic
 
