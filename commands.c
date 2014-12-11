@@ -163,83 +163,6 @@ int tstCmd(char **argv,unsigned short argc){
   return 0;
 }
 
-//cause an error and see how it is reported on reset
-int reset_testCmd(char **argv,unsigned short argc){
-  //mutex to abuse
-  CTL_MUTEX_t mutex;
-  //check what type of error to generate
-  if(!strcmp(argv[1],"mutex")){
-    //generate mutex unlock call error
-    printf("Causing a mutex unlock call error\r\n");
-    //wait for chars to clear
-    ctl_timeout_wait(ctl_get_current_time()+100);
-    //init mutex
-    ctl_mutex_init(&mutex);
-    //unlock mutex without locking this causes an error
-    ctl_mutex_unlock(&mutex);
-  }else if(!strcmp(argv[1],"isrCall")){
-    //generate unsupported call from ISR error
-    printf("Causing an unsupported call from ISR\r\n");
-    //wait for chars to clear
-    ctl_timeout_wait(ctl_get_current_time()+100);
-    //use P2 interrupts for software defined interrupts
-    P2IFG|=BIT0;
-    P2IE|=BIT0;
-  }else if(!strcmp(argv[1],"tasks")){
-    //generate no tasks to run error
-    printf("Causing a no tasks to run error\r\n");
-    //wait for chars to clear
-    ctl_timeout_wait(ctl_get_current_time()+100);
-    while(ctl_task_executing->next!=NULL){
-      ctl_task_remove(ctl_task_executing->next);
-    }
-    //call timer wait, this generates an error because we have killed all other tasks
-    ctl_timeout_wait(ctl_get_current_time()+100);
-  }else if(!strcmp(argv[1],"WDT")){
-    //generate a watchdog timeout error
-    printf("Causing watchdog reset\r\n");
-    //wait for chars to clear
-    ctl_timeout_wait(ctl_get_current_time()+100);
-    WDTCTL=0;
-  }else if(!strcmp(argv[1],"flash")){
-    //generate a watchdog timeout error
-    printf("Causing a flash security key violation\r\n");
-    //wait for chars to clear
-    ctl_timeout_wait(ctl_get_current_time()+100);
-    FCTL1=0;
-  }else if(!strcmp(argv[1],"fetch")){
-    //generate a watchdog timeout error
-    printf("Causing invalid instruction fetch\r\n");
-    //wait for chars to clear
-    ctl_timeout_wait(ctl_get_current_time()+100);
-    //call a function that is located at 0x170
-    ((void (*)(void))0x170)();
-  }
-  printf("Failed to generate error\r\n");
-  return 0;
-}
-  
-//P2.0 interrupt is used as a software interrupt to trigger an unsupported call from ISR error
-void error_ISR(void) __ctl_interrupt[PORT2_VECTOR]{
-  unsigned char flags=P2IFG&P2IE;
-  P2IFG&=~flags;
-  //Check for bit zero
-  if(flags&BIT0){
-    //make an unsupported call from ISR
-    ctl_timeout_wait(0);
-  }
-}
-
-//report an error into the error log
-int reportCmd(char **argv,unsigned short argc){
-  if(argc!=4){
-    printf("Error : %s requires 4 arguments but %i given.\r\n",argv[0],argc);
-    return 1;
-  }
-  report_error(atoi(argv[1]),atoi(argv[2]),atoi(argv[3]),atoi(argv[4]));
-  return 0;
-}
-
 //define a handy-dandy macro
 #define ARRAY_SIZE(a)   (sizeof(a)/sizeof(a[0]))
 
@@ -361,28 +284,6 @@ int baudCmd(char **argv,unsigned short argc){
   return 0;
 }
 
-int wdttstCmd(char **argv,unsigned short argc){
-    unsigned long delay;
-    int en,i;
-    unsigned short r1,r2,r3;
-    //read sector
-    if(1!=sscanf(argv[1],"%lu",&delay)){
-      //print error
-      printf("Error parsing delay \"%s\"\r\n",argv[1]);
-      return -3;
-    }  
-    //disable interrupts
-    en = BUS_stop_interrupts();
-    //disable watchdog
-    WDT_STOP();
-    for(;delay!=0;delay--);
-    //re-enable interrupts if enabled before
-    BUS_restart_interrupts(en);
-    //Print success message
-    printf("Delay Complete\r\n");
-    return 0;
-}
-
 int imagertakepic(char **argv,unsigned short argc){
   unsigned char val = 0;
   unsigned char dat[4 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
@@ -486,9 +387,6 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                          {"addr"," [addr]\r\n\t""Get/Set I2C address.",addrCmd},
                          {"baud"," [show|set|save|list] [rate]\r\n\t""Get/Set UART baud rate.",baudCmd},
                          {"tst"," addr len\r\n\t""Send test data to addr.",tstCmd},
-                         {"tstrst","error\r\n\t""Cause An error that causes a reset",reset_testCmd},
-                         {"report","lev src err arg\r\n\t""Report an error",reportCmd},
-                         {"wdttst","delay""\r\n\t""Stop watchdog and disable interrupts for a bit",wdttstCmd},
                          {"imagertakepic","Send a message to the imager to tell it that it should take a picture",imagertakepic},
                          {"imagerloadpic","Send a message to the imager to tell it that it should load it's most recent picture and send it over SPI",imagerloadpic},
                          {"buffersize","Get the size of the buffer",bufferlen},
