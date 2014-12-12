@@ -169,7 +169,7 @@ int main(void){
  
   //setup UCA1 UART
   UCA1_init_UART();
-  
+  UCA1_BR57600();
 
   //setup P7 for LED's
   P7OUT=0x00;
