@@ -175,17 +175,6 @@ int main(void){
   P7OUT=0x00;
   P7DIR=0xFF;
   
-  P7OUT|=BIT0;
-
-  //setup P8 for output
-  P8OUT=0x00;
-  P8DIR=0xFF;
-  P8SEL=0x00;
-
-  //setup P5.7 for SVSOUT
-  P5DIR|=BIT7;
-  P5SEL|=BIT7;
-  
   
   //set default address, an unused address
   addr=0x1F;
