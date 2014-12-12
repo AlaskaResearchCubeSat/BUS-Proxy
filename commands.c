@@ -360,7 +360,7 @@ int schedulepic(char **argv,unsigned short argc){
      return -1;
   }
   
-  printf("Time is \"%i\"\r\n",val);
+  printf("Time is \"%lu\"\r\n",val);
   
   //initialize packet
   payload=BUS_cmd_init(dat,CMD_IMG_TAKE_TIMED_PIC);
