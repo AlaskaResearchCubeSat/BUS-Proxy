@@ -302,8 +302,8 @@ int imagertakepic(char **argv,unsigned short argc){
   
   printf("Sector is \"%i\"\r\n",val);
   
-  //initialize packet     // ID is 14
-  payload=BUS_cmd_init(dat,14);
+  //initialize packet
+  payload=BUS_cmd_init(dat,CMD_IMG_TAKE_PIC_NOW);
   //set payload
   payload[0]=val;
   payload[1]=0;
@@ -332,8 +332,8 @@ int imagerloadpic(char **argv,unsigned short argc){
   
   printf("Sector is \"%i\"\r\n",val);
   
-  //initialize packet     // ID is 15
-  payload=BUS_cmd_init(dat,15);
+  //initialize packet
+  payload=BUS_cmd_init(dat,CMD_IMG_READ_PIC);
   //set payload
   payload[0]=val;
   payload[1]=0;
@@ -362,8 +362,8 @@ int schedulepic(char **argv,unsigned short argc){
   
   printf("Time is \"%i\"\r\n",val);
   
-  //initialize packet     // ID is 15
-  payload=BUS_cmd_init(dat,13);
+  //initialize packet
+  payload=BUS_cmd_init(dat,CMD_IMG_TAKE_TIMED_PIC);
   //set payload
   payload[0]=(val >> 24) & 0xFF;;
   payload[1]=(val >> 16) & 0xFF;
