@@ -15,7 +15,7 @@
 CTL_TASK_t tasks[3];
 
 //stacks for tasks
-unsigned stack1[1+200+1];          
+unsigned stack1[1+200+1];  
 unsigned stack2[1+500+1];
 unsigned stack3[1+150+1];  
 
@@ -24,6 +24,7 @@ CTL_EVENT_SET_t cmd_parse_evt;
 unsigned char buffer[80];
 
 unsigned char reportReceived = 1;
+
 
 
 //set printf and friends to send chars out UCA1 uart
@@ -106,48 +107,45 @@ void sub_events(void *p) __toplevel{
       //send command
       BUS_cmd_tx(BUS_ADDR_CDH,buf,0,0,BUS_I2C_SEND_FOREGROUND);
     }
-    /*if(e&SUB_EV_TIME_CHECK){
-      printf("time ticker = %li\r\n",get_ticker_time());
-    }*/
     if(e&SUB_EV_SPI_DAT){
-        
-        // Get length of incoming data
+        //get length
         len=arcBus_stat.spi_stat.len;
-
-        // If this is a block from an image (checking by length)
-        if(len == 512 + BUS_SPI_CRC_LEN + 3)
-        {
-          // Print out data received from SD card
-          printf("Received bytes from image #%i section #%i:\r\n",arcBus_stat.spi_stat.rx[512],arcBus_stat.spi_stat.rx[513]);
-          for(i=0;i<512;i++){
-            printf("%03i ",arcBus_stat.spi_stat.rx[i]);
-          }
-          printf("\r\nSD card response was \"%i\" \r\n\r\n",arcBus_stat.spi_stat.rx[514]);
+        //check the data type
+        switch(arcBus_stat.spi_stat.rx[1]){
+          case SPI_ERROR_DAT:
+            //print errors
+            print_spi_err(arcBus_stat.spi_stat.rx,len);
+          break;
+          case SPI_IMG_DAT:
+              // Print out data received from SD card
+              printf("Received bytes from image #%i section #%i:\r\n",arcBus_stat.spi_stat.rx[512],arcBus_stat.spi_stat.rx[513]);
+              for(i=0;i<512;i++){
+                printf("%03i ",arcBus_stat.spi_stat.rx[i]);
+              }
+              printf("\r\nSD card response was \"%i\" \r\n\r\n",arcBus_stat.spi_stat.rx[514]);
+          break;
+          default:
+              puts("Unknown SPI data recived:\r");
+              //print out data
+              for(i=0;i<len;i++){
+                //printf("0x%02X ",rx[i]);
+                printf("%03i ",arcBus_stat.spi_stat.rx[i]);
+              }
+              printf("\r\n");
         }
-        
         //free buffer
         BUS_free_buffer_from_event();
     }
     if(e&SUB_EV_SPI_ERR_CRC){
-      //puts("SPI bad CRC\r");
+      puts("SPI bad CRC\r");
       report_error(ERR_LEV_ERROR,PROXY_ERR_SRC_SUBSYSTEM,SUB_ERR_SPI_CRC,0);
     }
-    if(e&SUB_EV_ASYNC_OPEN){
-      //kill off the terminal
-      /*ctl_task_remove(&tasks[1]);
-      //setup closed event
-      async_setup_close_event(&SUB_events,SUB_EV_ASYNC_CLOSE);
-      //setup UART terminal        
-      ctl_task_run(&tasks[1],2,terminal,"\rRemote Terminal started\r\n","async_terminal",sizeof(stack2)/sizeof(stack2[0])-2,stack2+1,0);
-      //print message
-      printf("Async Opened from 0x%02X\r\n",async_addr);*/
-      async_close();
+    if(e&SUB_EV_SPI_ERR_BUSY){
+      puts("SPI Busy\r");
     }
-    if(e&SUB_EV_ASYNC_CLOSE){
-      //kill off async terminal
-      //ctl_task_remove(&tasks[1]);
-      //setup UART terminal        
-      //ctl_task_run(&tasks[1],2,terminal,"\rUart Terminal Started\r\n","terminal",sizeof(stack2)/sizeof(stack2[0])-2,stack2+1,0);
+    if(e&SUB_EV_ASYNC_OPEN){
+      //close async connection, not supported
+      async_close();
     }
   }
 }
@@ -174,7 +172,6 @@ int main(void){
   //setup P7 for LED's
   P7OUT=0x00;
   P7DIR=0xFF;
-  
   
   //set default address, an unused address
   addr=0x1F;

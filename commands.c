@@ -89,6 +89,7 @@ int addrCmd(char **argv,unsigned short argc){
   return 0;
 }
 
+
 //define a handy-dandy macro
 #define ARRAY_SIZE(a)   (sizeof(a)/sizeof(a[0]))
 
@@ -210,6 +211,7 @@ int baudCmd(char **argv,unsigned short argc){
   return 0;
 }
 
+
 int imagertakepic(char **argv,unsigned short argc){
   unsigned char val = 0;
   unsigned char dat[4 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
@@ -273,7 +275,6 @@ int imagerloadpic(char **argv,unsigned short argc){
 int schedulepic(char **argv,unsigned short argc){
   ticker val = 0;
   unsigned char dat[4 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
-  // 14 is takepic, 15 is loadpic, 13 is schedule pic
 
   if(argc < 1)
   {
@@ -300,12 +301,11 @@ int schedulepic(char **argv,unsigned short argc){
   return 0;
 }
 
-
-
 int bufferlen(char **argv,unsigned short argc){
   printf("Buffer size is %i\r\n",BUS_get_buffer_size());
   return 0;
 }
+
 
 //table of commands with help
 const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or help on a spesific command.",helpCmd},
