@@ -215,60 +215,40 @@ int baudCmd(char **argv,unsigned short argc){
 int imagertakepic(char **argv,unsigned short argc){
   unsigned char val = 0;
   unsigned char dat[4 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
-  // 14 is takepic, 15 is loadpic
-
-  if(argc < 1)
-  {
-    printf("Please specify a sector.\r\n");
-    return -1;
-  }
-  if(sscanf(argv[1],"%i",&val)!=1)
-  {
-     printf("Invalid sector.\r\n");
-     return -1;
-  }
-  
-  printf("Sector is \"%i\"\r\n",val);
   
   //initialize packet
   payload=BUS_cmd_init(dat,CMD_IMG_TAKE_PIC_NOW);
-  //set payload
-  payload[0]=val;
-  payload[1]=0;
-  payload[2]=0;
-  payload[3]=0;
   //send packet
-  BUS_cmd_tx(BUS_ADDR_IMG,dat,4,0,BUS_I2C_SEND_FOREGROUND);
+  BUS_cmd_tx(BUS_ADDR_IMG,dat,0,0,BUS_I2C_SEND_FOREGROUND);
   return 0;
 }
 
 int imagerloadpic(char **argv,unsigned short argc){
-  unsigned char val = 0;
-  unsigned char dat[4 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
-  // 14 is takepic, 15 is loadpic
+  unsigned char num,block;
+  unsigned char dat[2 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
 
-  if(argc < 1)
-  {
-    printf("Please specify a sector.\r\n");
+  if(argc != 2){
+    printf("%s requires 2 arguments but %i given\r\n",argv[0],argc);
     return -1;
   }
-  if(sscanf(argv[1],"%i",&val)!=1)
-  {
-     printf("Invalid sector.\r\n");
+  if(sscanf(argv[1],"%i",&num)!=1){
+     printf("Invalid image number.\r\n");
+     return -1;
+  }
+  if(sscanf(argv[2],"%i",&block)!=1){
+     printf("Invalid block number.\r\n");
      return -1;
   }
   
-  printf("Sector is \"%i\"\r\n",val);
+  printf("Reading block %i from image #%i\r\n",block,num);
   
   //initialize packet
   payload=BUS_cmd_init(dat,CMD_IMG_READ_PIC);
   //set payload
-  payload[0]=val;
-  payload[1]=0;
-  payload[2]=0;
-  payload[3]=0;
+  payload[0]=num;
+  payload[1]=block;
   //send packet
-  BUS_cmd_tx(BUS_ADDR_IMG,dat,4,0,BUS_I2C_SEND_FOREGROUND);
+  BUS_cmd_tx(BUS_ADDR_IMG,dat,2,0,BUS_I2C_SEND_FOREGROUND);
   return 0;
 }
 

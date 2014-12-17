@@ -11,6 +11,7 @@
 #include "Proxy_errors.h"
 #include <terminal.h>
 #include "flash.h"
+#include "../IMG/IMG.h"
 
 CTL_TASK_t tasks[3];
 
@@ -85,7 +86,7 @@ void sub_events(void *p) __toplevel{
   unsigned int e,len;
   int i;
   unsigned char buf[10],*ptr;
-  
+  IMG_DAT *block;
   extern unsigned char async_addr;
   for(;;){
     e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&SUB_events,SUB_EV_ALL|SUB_EV_ASYNC_OPEN|SUB_EV_ASYNC_CLOSE,CTL_TIMEOUT_NONE,0);
@@ -117,12 +118,32 @@ void sub_events(void *p) __toplevel{
             print_spi_err(arcBus_stat.spi_stat.rx,len);
           break;
           case SPI_IMG_DAT:
-              // Print out data received from SD card
-              printf("Received bytes from image #%i section #%i:\r\n",arcBus_stat.spi_stat.rx[512],arcBus_stat.spi_stat.rx[513]);
-              for(i=0;i<512;i++){
-                printf("%03i ",arcBus_stat.spi_stat.rx[i]);
+              block=(IMG_DAT*)(arcBus_stat.spi_stat.rx+2);
+              //check length
+              if(len!=sizeof(IMG_DAT)+2){
+                  printf("Incorrect image block length %i\r\n",len);
               }
-              printf("\r\nSD card response was \"%i\" \r\n\r\n",arcBus_stat.spi_stat.rx[514]);
+              //check block type
+              switch(block->magic){
+                  case BT_IMG_START:
+                      // Print out data received from SD card
+                      printf("Received first image block from image #%i\r\n""Total blocks = %i\r\n",block->num,block->block);
+                  break;
+                  case BT_IMG_BODY:
+                      // Print out data received from SD card
+                      printf("Received bytes from image #%i block #%i\r\n",block->num,block->block);
+                  break;
+                  default:
+                      printf("Error : Invalid block\r\n");
+                  break;
+              }
+              //print out data
+              for(i=0,ptr=(unsigned char*)block;i<sizeof(IMG_DAT);i++){
+                printf("0x%02X ",ptr[i]);
+                if(i%16==15){
+                    printf("\r\n");
+                }
+              }
           break;
           default:
               puts("Unknown SPI data recived:\r");
