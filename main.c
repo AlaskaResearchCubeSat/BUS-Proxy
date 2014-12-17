@@ -10,6 +10,7 @@
 #include "timerA.h"
 #include "Proxy_errors.h"
 #include <terminal.h>
+#include <crc.h>
 #include "flash.h"
 #include "../IMG/IMG.h"
 
@@ -87,6 +88,7 @@ void sub_events(void *p) __toplevel{
   int i;
   unsigned char buf[10],*ptr;
   IMG_DAT *block;
+  unsigned short check;
   extern unsigned char async_addr;
   for(;;){
     e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&SUB_events,SUB_EV_ALL|SUB_EV_ASYNC_OPEN|SUB_EV_ASYNC_CLOSE,CTL_TIMEOUT_NONE,0);
@@ -122,6 +124,12 @@ void sub_events(void *p) __toplevel{
               //check length
               if(len!=sizeof(IMG_DAT)+2){
                   printf("Incorrect image block length %i\r\n",len);
+              }
+              //calculate CRC
+              check=crc16(block,sizeof(*block)-sizeof(block->CRC));
+              //check block CRC
+              if(check!=block->CRC){
+                  printf("Error : incorrect CRC 0x%04X sent 0x%04X calculated\r\n",block->CRC,check);
               }
               //check block type
               switch(block->magic){
