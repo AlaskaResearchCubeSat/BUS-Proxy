@@ -226,6 +226,7 @@ int imagertakepic(char **argv,unsigned short argc){
 int imagerloadpic(char **argv,unsigned short argc){
   unsigned char num,block;
   unsigned char dat[2 + BUS_I2C_HDR_LEN + BUS_I2C_CRC_LEN],*payload;
+  int resp;
 
   if(argc != 2){
     printf("%s requires 2 arguments but %i given\r\n",argv[0],argc);
@@ -248,7 +249,15 @@ int imagerloadpic(char **argv,unsigned short argc){
   payload[0]=num;
   payload[1]=block;
   //send packet
-  BUS_cmd_tx(BUS_ADDR_IMG,dat,2,0,BUS_I2C_SEND_FOREGROUND);
+  resp=BUS_cmd_tx(BUS_ADDR_IMG,dat,2,0,BUS_I2C_SEND_FOREGROUND);
+  //check response
+  if(resp==RET_SUCCESS){
+    printf("Request sent succussfully\r\n");
+    //wait for SPI data to arrive
+    ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS,&SUB_events,SUB_EV_SPI,CTL_TIMEOUT_DELAY,1024);
+  }else{
+    printf("Failed to send request %s\r\n",BUS_error_str(resp));
+  }
   return 0;
 }
 
