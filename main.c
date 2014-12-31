@@ -165,7 +165,9 @@ int main(void){
 
   //TESTING: set log level to report everything by default
   set_error_level(0);
- 
+     
+  //disable timesliceing so that communication is possible without CDH
+  BUS_set_test_mode(BUS_TM_NO_TIMESLICE);
  
   //setup UCA1 UART
   UCA1_init_UART();
