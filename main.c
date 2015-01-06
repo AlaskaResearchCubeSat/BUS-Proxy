@@ -87,7 +87,7 @@ void sub_events(void *p) __toplevel{
         //get length
         len=arcBus_stat.spi_stat.len;
         //check the data type
-        switch(arcBus_stat.spi_stat.rx[1]){
+        switch(arcBus_stat.spi_stat.rx[0]){
           case SPI_ERROR_DAT:
             //print errors
             print_spi_err(arcBus_stat.spi_stat.rx,len);
